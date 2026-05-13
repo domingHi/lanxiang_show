@@ -1,4 +1,4 @@
-const SHENZHEN_GEOJSON_URL = "https://geo.datav.aliyun.com/areas_v3/bound/440300_full.json";
+const SHENZHEN_GEOJSON_URL = "./shenzhen.json";
 
 const stores = [
   {
