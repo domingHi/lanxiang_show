@@ -4,41 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>深圳分店顺序点亮地图</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles-sequence.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
 <body>
-  <main class="page-shell">
-    <section class="hero-panel">
-      <p class="eyebrow">Branch Sequence Map</p>
-      <h1>深圳分店顺序点亮</h1>
-      <p class="subtitle">无中心店、无飞线箭头，只按指定顺序逐个点亮深圳城区分店，画面更简洁。</p>
-
-      <div class="stats">
-        <div>
-          <span id="activeCount">0</span>
-          <small>已点亮</small>
-        </div>
-        <div>
-          <span id="totalCount">0</span>
-          <small>分店总数</small>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="replayBtn" type="button">重新播放</button>
-        <button id="pauseBtn" type="button">暂停</button>
-      </div>
-
-      <ol id="storeList" class="store-list"></ol>
-    </section>
-
-    <section class="map-panel">
-      <div id="map"></div>
-      <div class="map-caption">顺序点亮版本：仅展示分店点位，不展示中心店和连接箭头。</div>
-    </section>
-  </main>
-
+  <div id="map"></div>
   <script src="./app-sequence.js"></script>
 </body>
 </html>

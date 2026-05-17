@@ -7,8 +7,9 @@
 - `index.html`：页面结构
 - `styles.css`：大屏风格样式
 - `app.js`：地图加载、门店数据、点亮动画和控制逻辑
-- `index-sequence.html`：顺序点亮版本页面，无中心店、无飞线箭头
+- `index-sequence.html`：顺序点亮版本页面（全屏地图，刷新后 3 秒自动点亮）
 - `app-sequence.js`：顺序点亮版本逻辑
+- `styles-sequence.css`：顺序点亮版本全屏样式
 - `shenzhen.json`：深圳地图边界数据，本地加载可避免外部地图接口访问失败
 
 ## 运行方式

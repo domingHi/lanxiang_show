@@ -1,5 +1,11 @@
 const SHENZHEN_GEOJSON_URL = "./shenzhen.json";
 
+// 广东省深圳市龙岗区大鹏街道中山路7号 附近
+const DAPENG_LABEL = {
+  name: "大鹏新区",
+  value: [114.4782, 22.5884]
+};
+
 const stores = [
   {
     name: "湖贝店",
@@ -183,21 +189,14 @@ const stores = [
   }
 ];
 
+const AUTO_START_DELAY_MS = 3000;
+
 const state = {
   activeIndex: 0,
   timer: null,
   paused: false,
   chart: null
 };
-
-const activeCountEl = document.querySelector("#activeCount");
-const totalCountEl = document.querySelector("#totalCount");
-const storeListEl = document.querySelector("#storeList");
-const replayBtn = document.querySelector("#replayBtn");
-const pauseBtn = document.querySelector("#pauseBtn");
-
-totalCountEl.textContent = stores.length;
-renderStoreList();
 
 async function main() {
   const chart = echarts.init(document.querySelector("#map"));
@@ -213,7 +212,7 @@ async function main() {
 
     echarts.registerMap("shenzhen", geoJson);
     chart.setOption(createOption([]));
-    startLighting();
+    setTimeout(startLighting, AUTO_START_DELAY_MS);
   } catch (error) {
     chart.setOption(createErrorOption(error));
   }
@@ -241,13 +240,9 @@ function startLighting() {
 function updateChart() {
   const activeStores = stores.slice(0, state.activeIndex);
 
-  activeCountEl.textContent = activeStores.length;
-  storeListEl.querySelectorAll("li").forEach((item, index) => {
-    item.classList.toggle("active", index < state.activeIndex);
-  });
-
   state.chart.setOption({
     series: [
+      { data: [DAPENG_LABEL] },
       { data: stores },
       { data: activeStores }
     ]
@@ -294,6 +289,22 @@ function createOption(activeStores) {
       }
     },
     series: [
+      {
+        name: "大鹏新区",
+        type: "scatter",
+        coordinateSystem: "geo",
+        data: [DAPENG_LABEL],
+        symbolSize: 0,
+        label: {
+          show: true,
+          formatter: "大鹏新区",
+          color: "#9fdcff",
+          fontSize: 14,
+          fontWeight: 700
+        },
+        tooltip: { show: false },
+        zlevel: 2
+      },
       {
         name: "全部分店",
         type: "scatter",
@@ -353,32 +364,5 @@ function createErrorOption(error) {
     }
   };
 }
-
-function renderStoreList() {
-  storeListEl.innerHTML = stores
-    .map(
-      (store, index) => `
-        <li>
-          <strong>${String(index + 1).padStart(2, "0")} ${store.name}</strong>
-          <span>${store.district}</span>
-        </li>
-      `
-    )
-    .join("");
-}
-
-replayBtn.addEventListener("click", () => {
-  state.activeIndex = 0;
-  state.paused = false;
-  pauseBtn.textContent = "暂停";
-  activeCountEl.textContent = "0";
-  updateChart();
-  startLighting();
-});
-
-pauseBtn.addEventListener("click", () => {
-  state.paused = !state.paused;
-  pauseBtn.textContent = state.paused ? "继续" : "暂停";
-});
 
 main();
