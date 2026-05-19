@@ -8,10 +8,245 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #04111f;
+  font-family: "PingFang SC", "Microsoft YaHei", "HarmonyOS Sans SC", "Source Han Sans CN", sans-serif;
+  color: #c8e1ff;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 10%, rgba(33, 121, 197, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(56, 189, 248, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at center, #0b2447 0%, #050b1a 60%, #02060f 100%);
 }
 
+/* ============== 背景：缓慢流动的星空 ============== */
+.bg-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 28%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 72%, #79c3ff 50%, transparent 100%),
+    radial-gradient(1px 1px at 82% 18%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 40% 80%, #aee0ff 50%, transparent 100%),
+    radial-gradient(2px 2px at 92% 52%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 12% 60%, #ffd2a8 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 50% 50%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 28% 8%, #c4e7ff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 78% 88%, #ffffff 50%, transparent 100%);
+  background-repeat: repeat;
+  background-size: 600px 600px;
+  opacity: 0.85;
+  animation: stars-drift 180s linear infinite;
+}
+
+@keyframes stars-drift {
+  from { background-position: 0 0; }
+  to { background-position: 600px 600px; }
+}
+
+/* ============== 背景：浅浅的网格科技感 ============== */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 50%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 50%, #000 30%, transparent 100%);
+}
+
+/* ============== 地图 ============== */
 #map {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* 纯展示动画，禁用一切鼠标交互（拖动 / 缩放 / 悬停 / 点击都不响应） */
+  pointer-events: none;
+  /* 轻微透视俯视，让 2D 地图有"沙盘"感 */
+  transform: perspective(2200px) rotateX(12deg);
+  transform-origin: 50% 60%;
+  /* 整体投下一道蓝色光晕，进一步加强浮起感 */
+  filter: drop-shadow(0 18px 24px rgba(13, 92, 145, 0.45));
+}
+
+/* ============== 四角装饰 ============== */
+.corner {
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  z-index: 5;
+  pointer-events: none;
+  border: 2px solid rgba(103, 232, 249, 0.7);
+  filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.6));
+}
+
+.corner-tl { top: 18px; left: 18px;  border-right: 0; border-bottom: 0; }
+.corner-tr { top: 18px; right: 18px; border-left: 0;  border-bottom: 0; }
+.corner-bl { bottom: 18px; left: 18px;  border-right: 0; border-top: 0; }
+.corner-br { bottom: 18px; right: 18px; border-left: 0;  border-top: 0; }
+
+/* ============== 标题 ============== */
+.hud-header {
+  position: fixed;
+  top: 18px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+}
+
+.hud-header__title {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  background: linear-gradient(90deg, #67e8f9 0%, #fff8d6 50%, #67e8f9 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 12px rgba(103, 232, 249, 0.4));
+  animation: text-shine 5s linear infinite;
+}
+
+@keyframes text-shine {
+  to { background-position: 200% center; }
+}
+
+.hud-header__subtitle {
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 6px;
+  color: #82c1ff;
+  opacity: 0.6;
+}
+
+.hud-header::before,
+.hud-header::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  width: 160px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.8), transparent);
+  box-shadow: 0 0 6px rgba(103, 232, 249, 0.5);
+}
+
+.hud-header::before { left: calc(50% - 260px); }
+.hud-header::after  { right: calc(50% - 260px); }
+
+/* ============== 右上角计数器 ============== */
+.hud-counter {
+  position: fixed;
+  top: 28px;
+  right: 50px;
+  z-index: 10;
+  text-align: right;
+  pointer-events: none;
+  min-width: 180px;
+}
+
+.hud-counter__num {
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff7cc 0%, #facc15 50%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 22px rgba(250, 204, 21, 0.55));
+  font-family: "Bahnschrift", "Oswald", "Microsoft YaHei", sans-serif;
+}
+
+.hud-counter__bar {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(103, 232, 249, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hud-counter__bar-fill {
+  position: absolute;
+  inset: 0 100% 0 0;
+  background: linear-gradient(90deg, #67e8f9, #facc15);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
+  transition: right 0.5s ease;
+}
+
+.hud-counter__label {
+  margin-top: 10px;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #b6c8e0;
+}
+
+.hud-counter__label span {
+  color: #67e8f9;
+  font-weight: 700;
+}
+
+/* ============== 左下角当前点亮门店 ============== */
+.hud-ticker {
+  position: fixed;
+  bottom: 40px;
+  left: 60px;
+  z-index: 10;
+  pointer-events: none;
+  padding: 16px 28px 16px 24px;
+  min-width: 320px;
+  background: linear-gradient(135deg, rgba(8, 28, 50, 0.78), rgba(8, 28, 50, 0.45));
+  border: 1px solid rgba(103, 232, 249, 0.45);
+  border-left: 3px solid #facc15;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow:
+    0 0 28px rgba(250, 204, 21, 0.18),
+    inset 0 0 24px rgba(103, 232, 249, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  opacity: 0.85;
+}
+
+.hud-ticker.flash {
+  transform: scale(1.04);
+  opacity: 1;
+  box-shadow:
+    0 0 42px rgba(250, 204, 21, 0.45),
+    inset 0 0 24px rgba(250, 204, 21, 0.18);
+}
+
+.hud-ticker__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #facc15;
+  box-shadow: 0 0 14px #facc15, 0 0 28px rgba(250, 204, 21, 0.5);
+  animation: dot-pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.6; }
+}
+
+.hud-ticker__name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #fff7cc;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.55);
+}
+
+.hud-ticker__district {
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #67e8f9;
+  opacity: 0.85;
 }

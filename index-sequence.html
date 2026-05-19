@@ -3,12 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>深圳分店顺序点亮地图</title>
+  <title>深圳分店 · 3D 顺序点亮全景</title>
   <link rel="stylesheet" href="./styles-sequence.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
 <body>
+  <div class="bg-stars"></div>
+  <div class="bg-grid"></div>
+
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <header class="hud-header">
+    <div class="hud-header__title">深圳分店点亮全景</div>
+    <div class="hud-header__subtitle">SHENZHEN · 3D LIGHT-UP MAP</div>
+  </header>
+
+  <aside class="hud-counter">
+    <div class="hud-counter__num" id="counter-num">0</div>
+    <div class="hud-counter__bar">
+      <div class="hud-counter__bar-fill" id="counter-bar"></div>
+    </div>
+    <div class="hud-counter__label">
+      已点亮 / <span id="counter-total">0</span> 家分店
+    </div>
+  </aside>
+
   <div id="map"></div>
+
+  <div class="hud-ticker" id="ticker">
+    <span class="hud-ticker__dot"></span>
+    <span class="hud-ticker__name" id="ticker-name">准备就绪</span>
+    <span class="hud-ticker__district" id="ticker-district">即将点亮深圳全城</span>
+  </div>
+
   <script src="./app-sequence.js"></script>
 </body>
 </html>

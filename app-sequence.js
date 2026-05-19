@@ -1,9 +1,9 @@
 const SHENZHEN_GEOJSON_URL = "./shenzhen.json";
 
-// 广东省深圳市龙岗区大鹏街道中山路7号 附近
+// 大鹏新区在 geojson 中合并进了龙岗区，这里手动标注一个文字标签
 const DAPENG_LABEL = {
   name: "大鹏新区",
-  value: [114.4782, 22.5884]
+  value: [114.4782, 22.5884, 4]
 };
 
 const stores = [
@@ -190,17 +190,45 @@ const stores = [
 ];
 
 const AUTO_START_DELAY_MS = 3000;
+// 刚点亮特效持续时间（颜色循环 + 大涟漪），之后归入金色稳定涟漪
+const ACTIVE_DURATION_MS = 1000;
+// 每次点亮的间隔
+const INTERVAL_MS = 1200;
+// 连接线在画布上保留时间
+const CONNECTION_LIFETIME_MS = 5500;
+// 同时保留的连接线最大数量
+const MAX_CONNECTIONS = 6;
+
+// 刚点亮阶段的色彩循环
+const FLASH_COLORS = [
+  "#ff6b9d", // 玫红
+  "#ffd93d", // 明黄
+  "#6bf178", // 翠绿
+  "#22d3ee", // 青蓝
+  "#c084fc", // 紫罗兰
+  "#ffffff"  // 纯白爆闪
+];
+const STEADY_COLOR = "#facc15";
 
 const state = {
-  activeIndex: 0,
-  timer: null,
-  paused: false,
+  activeIndex: 0,          // 已点亮门店数（包含正在闪烁的那一颗）
+  flashingIndex: -1,       // 正在闪烁的门店索引；-1 表示无
+  flashColor: FLASH_COLORS[0],
+  connections: [],         // 飞行光线缓存
+  timer: null,             // 主时钟：每 INTERVAL_MS 点亮一颗
+  flashColorTimer: null,   // 颜色循环定时器
   chart: null
 };
 
 async function main() {
-  const chart = echarts.init(document.querySelector("#map"));
+  // 提升渲染像素比，让 2D 画布和文字在透视倾斜下依然清晰
+  const chart = echarts.init(document.querySelector("#map"), null, {
+    devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2)
+  });
   state.chart = chart;
+
+  const totalEl = document.getElementById("counter-total");
+  if (totalEl) totalEl.textContent = stores.length;
 
   try {
     const geoJson = await fetch(SHENZHEN_GEOJSON_URL).then((response) => {
@@ -211,7 +239,8 @@ async function main() {
     });
 
     echarts.registerMap("shenzhen", geoJson);
-    chart.setOption(createOption([]));
+    chart.setOption(createOption());
+
     setTimeout(startLighting, AUTO_START_DELAY_MS);
   } catch (error) {
     chart.setOption(createErrorOption(error));
@@ -220,126 +249,297 @@ async function main() {
   window.addEventListener("resize", () => chart.resize());
 }
 
+// ============ 主时钟：每隔 INTERVAL_MS 点亮一颗 ============
 function startLighting() {
   clearInterval(state.timer);
+  activateNextStore();
   state.timer = setInterval(() => {
-    if (state.paused) {
-      return;
-    }
-
     if (state.activeIndex >= stores.length) {
       clearInterval(state.timer);
       return;
     }
-
-    state.activeIndex += 1;
-    updateChart();
-  }, 520);
+    activateNextStore();
+  }, INTERVAL_MS);
 }
 
-function updateChart() {
-  const activeStores = stores.slice(0, state.activeIndex);
+function activateNextStore() {
+  const prev = state.activeIndex;
+  state.activeIndex += 1;
+  state.flashingIndex = state.activeIndex - 1;
+
+  // 从上一颗到这一颗加一条飞行光线（首颗不加）
+  if (prev > 0) {
+    state.connections.push({
+      coords: [stores[prev - 1].value, stores[state.flashingIndex].value],
+      addedAt: performance.now()
+    });
+    if (state.connections.length > MAX_CONNECTIONS) {
+      state.connections.shift();
+    }
+  }
+
+  refreshChart();
+  startFlashColorCycle();
+}
+
+// ============ 颜色循环：刚点亮的那颗在 1s 内不断变色 ============
+function startFlashColorCycle() {
+  clearInterval(state.flashColorTimer);
+  const startTime = performance.now();
+
+  state.flashColorTimer = setInterval(() => {
+    const elapsed = performance.now() - startTime;
+
+    if (elapsed >= ACTIVE_DURATION_MS) {
+      clearInterval(state.flashColorTimer);
+      state.flashingIndex = -1;
+      state.flashColor = STEADY_COLOR;
+      refreshChart(); // 把这颗"凝固"到金色稳定涟漪系列
+      return;
+    }
+
+    const idx = Math.floor(elapsed / 110) % FLASH_COLORS.length;
+    state.flashColor = FLASH_COLORS[idx];
+
+    // 仅改颜色，不动 data，最大程度避免 rippleEffect 被重置
+    state.chart.setOption({
+      series: [
+        {}, {}, {}, {},
+        {
+          itemStyle: {
+            color: state.flashColor,
+            shadowColor: state.flashColor
+          }
+        }
+      ]
+    });
+  }, 110);
+}
+
+// ============ 把当前状态同步到图表（飞行光线 + 金色涟漪 + 刚点亮涟漪） ============
+function refreshChart() {
+  // 清掉过期的飞行光线
+  const now = performance.now();
+  state.connections = state.connections.filter(
+    (c) => now - c.addedAt < CONNECTION_LIFETIME_MS
+  );
+
+  // 金色稳定涟漪：所有已点亮 - 当前闪烁中那颗
+  const goldEnd = state.flashingIndex >= 0 ? state.flashingIndex : state.activeIndex;
+  const goldData = stores.slice(0, goldEnd);
+
+  // 刚点亮：只有一颗
+  const flashStore = state.flashingIndex >= 0 ? stores[state.flashingIndex] : null;
+  const flashData = flashStore ? [flashStore] : [];
 
   state.chart.setOption({
     series: [
-      { data: [DAPENG_LABEL] },
-      { data: stores },
-      { data: activeStores }
+      {}, {},
+      { data: state.connections.map((c) => ({ coords: c.coords })) },
+      { data: goldData },
+      {
+        data: flashData,
+        itemStyle: {
+          color: state.flashColor,
+          shadowColor: state.flashColor
+        }
+      }
     ]
   });
+
+  updateHud(state.activeIndex, stores[state.activeIndex - 1]);
 }
 
-function createOption(activeStores) {
+function updateHud(count, current) {
+  const numEl = document.getElementById("counter-num");
+  const barEl = document.getElementById("counter-bar");
+  const nameEl = document.getElementById("ticker-name");
+  const districtEl = document.getElementById("ticker-district");
+  const tickerEl = document.getElementById("ticker");
+
+  if (numEl) numEl.textContent = count;
+  if (barEl) {
+    const percent = (count / stores.length) * 100;
+    barEl.style.right = `${100 - percent}%`;
+  }
+
+  if (current) {
+    if (nameEl) nameEl.textContent = current.name;
+    if (districtEl) districtEl.textContent = `${current.district} · 已点亮`;
+
+    if (tickerEl) {
+      tickerEl.classList.remove("flash");
+      // 触发重排让动画重新播放
+      void tickerEl.offsetWidth;
+      tickerEl.classList.add("flash");
+    }
+  }
+}
+
+function createOption() {
   return {
     backgroundColor: "transparent",
-    tooltip: {
-      trigger: "item",
-      formatter(params) {
-        if (params.data?.district) {
-          return `${params.data.name}<br/>${params.data.district}<br/>${params.data.address}`;
-        }
-        return params.name;
-      }
-    },
+    tooltip: { show: false },
     geo: {
       map: "shenzhen",
-      roam: true,
-      zoom: 1.12,
-      top: 48,
-      bottom: 48,
+      roam: false,
+      zoom: 1.18,
+      top: 80,
+      bottom: 70,
+      silent: true,
       label: {
         show: true,
         color: "#9fdcff",
-        fontSize: 12
+        fontSize: 14,
+        fontWeight: 600
       },
       itemStyle: {
-        areaColor: "#082b45",
-        borderColor: "#38bdf8",
-        borderWidth: 1.2,
-        shadowColor: "rgba(56, 189, 248, 0.45)",
-        shadowBlur: 12
-      },
-      emphasis: {
-        label: {
-          color: "#ffffff"
+        // 区域径向渐变，从中心淡蓝到边缘深蓝，伪造立体凸起感
+        areaColor: {
+          type: "radial",
+          x: 0.5, y: 0.5, r: 0.7,
+          colorStops: [
+            { offset: 0, color: "#10405f" },
+            { offset: 1, color: "#062035" }
+          ],
+          global: false
         },
-        itemStyle: {
-          areaColor: "#155e75"
-        }
+        borderColor: "rgba(103, 232, 249, 0.85)",
+        borderWidth: 1.3,
+        shadowColor: "rgba(56, 189, 248, 0.55)",
+        shadowBlur: 22
       }
     },
     series: [
+      // 0 · 大鹏新区文字标签
       {
         name: "大鹏新区",
         type: "scatter",
         coordinateSystem: "geo",
         data: [DAPENG_LABEL],
         symbolSize: 0,
+        silent: true,
         label: {
           show: true,
           formatter: "大鹏新区",
           color: "#9fdcff",
           fontSize: 14,
-          fontWeight: 700
+          fontWeight: 600
         },
-        tooltip: { show: false },
-        zlevel: 2
+        z: 2
       },
+      // 1 · 所有未点亮分店：暗色小点
       {
         name: "全部分店",
         type: "scatter",
         coordinateSystem: "geo",
         data: stores,
-        symbolSize: 8,
+        symbolSize: 7,
+        silent: true,
         itemStyle: {
-          color: "rgba(141, 182, 204, 0.42)"
-        }
+          color: "rgba(180, 210, 230, 0.5)",
+          shadowBlur: 4,
+          shadowColor: "rgba(180, 210, 230, 0.6)"
+        },
+        z: 3
       },
+      // 2 · 飞行光线：相邻点亮之间的流光连接，每条最多存活 CONNECTION_LIFETIME_MS
       {
-        name: "已点亮分店",
+        name: "飞行光线",
+        type: "lines",
+        coordinateSystem: "geo",
+        data: [],
+        polyline: false,
+        effect: {
+          show: true,
+          period: 2.4,
+          trailLength: 0.55,
+          symbol: "circle",
+          symbolSize: 5,
+          color: "#fff8d6"
+        },
+        lineStyle: {
+          color: "rgba(250, 204, 21, 0.45)",
+          width: 1.5,
+          opacity: 0.6,
+          curveness: 0.28,
+          shadowColor: "rgba(250, 204, 21, 0.55)",
+          shadowBlur: 6
+        },
+        silent: true,
+        z: 4
+      },
+      // 3 · 已点亮：金色 effectScatter，持续涟漪
+      {
+        name: "已点亮",
         type: "effectScatter",
         coordinateSystem: "geo",
-        data: activeStores,
-        symbolSize: 15,
+        data: [],
+        symbolSize: 11,
         showEffectOn: "render",
         rippleEffect: {
-          scale: 5,
-          brushType: "stroke"
+          scale: 4.5,
+          brushType: "stroke",
+          period: 3,
+          number: 2
+        },
+        itemStyle: {
+          color: STEADY_COLOR,
+          shadowBlur: 22,
+          shadowColor: STEADY_COLOR
         },
         label: {
           show: true,
           formatter: "{b}",
-          position: "right",
+          position: "top",
+          distance: 8,
           color: "#fff7cc",
-          fontSize: 13,
-          fontWeight: 700
+          fontSize: 12,
+          fontWeight: 700,
+          backgroundColor: "rgba(8, 28, 50, 0.75)",
+          padding: [3, 7],
+          borderRadius: 4,
+          borderColor: "rgba(250, 204, 21, 0.85)",
+          borderWidth: 1
+        },
+        silent: true,
+        z: 5
+      },
+      // 4 · 刚点亮：更大涟漪 + 颜色循环（1s 之后凝固到 #3）
+      {
+        name: "刚点亮",
+        type: "effectScatter",
+        coordinateSystem: "geo",
+        data: [],
+        symbolSize: 18,
+        showEffectOn: "render",
+        rippleEffect: {
+          scale: 7,
+          brushType: "stroke",
+          period: 1.6,
+          number: 3
         },
         itemStyle: {
-          color: "#facc15",
-          shadowBlur: 28,
-          shadowColor: "#facc15"
+          color: FLASH_COLORS[0],
+          shadowBlur: 36,
+          shadowColor: FLASH_COLORS[0]
         },
-        zlevel: 5
+        label: {
+          show: true,
+          formatter: "{b}",
+          position: "top",
+          distance: 12,
+          color: "#ffffff",
+          fontSize: 14,
+          fontWeight: 800,
+          backgroundColor: "rgba(8, 28, 50, 0.85)",
+          padding: [4, 10],
+          borderRadius: 4,
+          borderColor: "#ffffff",
+          borderWidth: 1
+        },
+        silent: true,
+        z: 6
       }
     ]
   };
