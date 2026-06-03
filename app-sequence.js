@@ -17,7 +17,7 @@ const stores = [
     name: "万科广场店",
     district: "龙岗区",
     address: "深圳市龙岗区坂田街道杨美社区坂锦路10号万致大厦2015",
-    value: [114.0758, 22.6368]
+    value: [114.0712, 22.6308]
   },
   {
     name: "万达广场店",
@@ -215,7 +215,7 @@ const stores = [
     name: "雪象店",
     district: "龙岗区",
     address: "深圳市龙岗区坂澜大道与雪竹径路交叉口下雪村东5巷9号楼",
-    value: [114.0786, 22.6378]
+    value: [114.084, 22.6515]
   }
 ];
 
@@ -235,6 +235,12 @@ const FLASH_COLORS = [
   "#ffffff"  // 纯白爆闪
 ];
 const STEADY_COLOR = "#facc15";
+const GEO_BASE_ZOOM = 1.32;
+// 深圳地图轮廓宽高比（经度按纬度折算），用于宽屏自适应放大
+const GEO_MAP_ASPECT = 1.82;
+const GEO_PAD_H = 24;
+const GEO_PAD_V = 84;
+const GEO_MAX_ZOOM = 1.75;
 
 const state = {
   activeIndex: 0,          // 已点亮门店数（包含正在闪烁的那一颗）
@@ -262,13 +268,40 @@ async function main() {
 
     echarts.registerMap("shenzhen", geoJson);
     chart.setOption(createOption());
+    applyGeoFit();
 
     setTimeout(startLighting, AUTO_START_DELAY_MS);
   } catch (error) {
     chart.setOption(createErrorOption(error));
   }
 
-  window.addEventListener("resize", () => chart.resize());
+  window.addEventListener("resize", () => {
+    chart.resize();
+    applyGeoFit();
+  });
+}
+
+function applyGeoFit() {
+  if (!state.chart) {
+    return;
+  }
+
+  const dom = state.chart.getDom();
+  const boxW = dom.clientWidth - GEO_PAD_H;
+  const boxH = dom.clientHeight - GEO_PAD_V;
+  if (boxW <= 0 || boxH <= 0) {
+    return;
+  }
+
+  const boxAspect = boxW / boxH;
+  let zoom = GEO_BASE_ZOOM;
+  if (boxAspect > GEO_MAP_ASPECT) {
+    zoom *= boxAspect / GEO_MAP_ASPECT;
+  }
+
+  state.chart.setOption({
+    geo: { zoom: Math.min(zoom, GEO_MAX_ZOOM) }
+  });
 }
 
 // ============ 主时钟：每隔 INTERVAL_MS 点亮一颗 ============
@@ -367,9 +400,14 @@ function createOption() {
     geo: {
       map: "shenzhen",
       roam: false,
-      zoom: 1.18,
-      top: 80,
-      bottom: 70,
+      zoom: GEO_BASE_ZOOM,
+      left: 12,
+      right: 12,
+      top: 48,
+      bottom: 36,
+      aspectScale: 1.0,
+      layoutCenter: ["50%", "50%"],
+      layoutSize: "100%",
       silent: true,
       label: {
         show: true,

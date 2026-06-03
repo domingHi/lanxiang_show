@@ -64,10 +64,7 @@ body {
   z-index: 1;
   /* 纯展示动画，禁用一切鼠标交互（拖动 / 缩放 / 悬停 / 点击都不响应） */
   pointer-events: none;
-  /* 轻微透视俯视，让 2D 地图有"沙盘"感 */
-  transform: perspective(2200px) rotateX(12deg);
-  transform-origin: 50% 60%;
-  /* 整体投下一道蓝色光晕，进一步加强浮起感 */
+  /* 仅保留投影，避免 rotateX 造成地图横向视觉压缩变形 */
   filter: drop-shadow(0 18px 24px rgba(13, 92, 145, 0.45));
 }
 

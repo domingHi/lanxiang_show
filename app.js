@@ -11,7 +11,7 @@ const stores = [
     name: "万科广场店",
     district: "龙岗区",
     address: "深圳市龙岗区坂田街道杨美社区坂锦路10号万致大厦2015",
-    value: [114.0758, 22.6368]
+    value: [114.0712, 22.6308]
   },
   {
     name: "万达广场店",
@@ -209,7 +209,7 @@ const stores = [
     name: "雪象店",
     district: "龙岗区",
     address: "深圳市龙岗区坂澜大道与雪竹径路交叉口下雪村东5巷9号楼",
-    value: [114.0786, 22.6378]
+    value: [114.084, 22.6515]
   }
 ];
 
@@ -315,9 +315,14 @@ function createOption(activeStores, activeRoutes) {
     geo: {
       map: "shenzhen",
       roam: true,
-      zoom: 1.12,
-      top: 48,
-      bottom: 48,
+      zoom: 1.28,
+      left: 12,
+      right: 12,
+      top: 40,
+      bottom: 40,
+      aspectScale: 1.0,
+      layoutCenter: ["50%", "50%"],
+      layoutSize: "100%",
       label: {
         show: true,
         color: "#9fdcff",
