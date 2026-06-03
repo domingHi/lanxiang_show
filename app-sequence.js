@@ -240,9 +240,6 @@ async function main() {
   });
   state.chart = chart;
 
-  const totalEl = document.getElementById("counter-total");
-  if (totalEl) totalEl.textContent = stores.length;
-
   try {
     const geoJson = await fetch(SHENZHEN_GEOJSON_URL).then((response) => {
       if (!response.ok) {
@@ -349,34 +346,6 @@ function refreshChart() {
       }
     ]
   });
-
-  updateHud(state.activeIndex, stores[state.activeIndex - 1]);
-}
-
-function updateHud(count, current) {
-  const numEl = document.getElementById("counter-num");
-  const barEl = document.getElementById("counter-bar");
-  const nameEl = document.getElementById("ticker-name");
-  const districtEl = document.getElementById("ticker-district");
-  const tickerEl = document.getElementById("ticker");
-
-  if (numEl) numEl.textContent = count;
-  if (barEl) {
-    const percent = (count / stores.length) * 100;
-    barEl.style.right = `${100 - percent}%`;
-  }
-
-  if (current) {
-    if (nameEl) nameEl.textContent = current.name;
-    if (districtEl) districtEl.textContent = `${current.district} · 已点亮`;
-
-    if (tickerEl) {
-      tickerEl.classList.remove("flash");
-      // 触发重排让动画重新播放
-      void tickerEl.offsetWidth;
-      tickerEl.classList.add("flash");
-    }
-  }
 }
 
 function createOption() {
