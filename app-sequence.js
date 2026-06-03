@@ -305,7 +305,7 @@ function startFlashColorCycle() {
     // 仅改颜色，不动 data，最大程度避免 rippleEffect 被重置
     state.chart.setOption({
       series: [
-        {}, {},
+        {}, {}, {},
         {
           itemStyle: {
             color: state.flashColor,
@@ -319,9 +319,17 @@ function startFlashColorCycle() {
 
 // ============ 把当前状态同步到图表（金色涟漪 + 刚点亮涟漪） ============
 function refreshChart() {
-  // 金色稳定涟漪：所有已点亮 - 当前闪烁中那颗
-  const goldEnd = state.flashingIndex >= 0 ? state.flashingIndex : state.activeIndex;
+  // 金色稳定涟漪：除当前正在闪烁的那颗外，其余已点亮门店始终保持
+  const goldEnd =
+    state.flashingIndex >= 0 ? state.flashingIndex : state.activeIndex;
   const goldData = stores.slice(0, goldEnd);
+
+  // 未点亮：当前闪烁中的那颗由「刚点亮」层展示，不再显示暗点
+  const unlitStart =
+    state.flashingIndex >= 0
+      ? state.flashingIndex + 1
+      : state.activeIndex;
+  const unlitData = stores.slice(unlitStart);
 
   // 刚点亮：只有一颗
   const flashStore = state.flashingIndex >= 0 ? stores[state.flashingIndex] : null;
@@ -330,6 +338,7 @@ function refreshChart() {
   state.chart.setOption({
     series: [
       {},
+      { data: unlitData },
       { data: goldData },
       {
         data: flashData,
