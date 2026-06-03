@@ -212,10 +212,6 @@ const AUTO_START_DELAY_MS = 3000;
 const ACTIVE_DURATION_MS = 1000;
 // 每次点亮的间隔
 const INTERVAL_MS = 1200;
-// 连接线在画布上保留时间
-const CONNECTION_LIFETIME_MS = 5500;
-// 同时保留的连接线最大数量
-const MAX_CONNECTIONS = 6;
 
 // 刚点亮阶段的色彩循环
 const FLASH_COLORS = [
@@ -232,7 +228,6 @@ const state = {
   activeIndex: 0,          // 已点亮门店数（包含正在闪烁的那一颗）
   flashingIndex: -1,       // 正在闪烁的门店索引；-1 表示无
   flashColor: FLASH_COLORS[0],
-  connections: [],         // 飞行光线缓存
   timer: null,             // 主时钟：每 INTERVAL_MS 点亮一颗
   flashColorTimer: null,   // 颜色循环定时器
   chart: null
@@ -281,20 +276,8 @@ function startLighting() {
 }
 
 function activateNextStore() {
-  const prev = state.activeIndex;
   state.activeIndex += 1;
   state.flashingIndex = state.activeIndex - 1;
-
-  // 从上一颗到这一颗加一条飞行光线（首颗不加）
-  if (prev > 0) {
-    state.connections.push({
-      coords: [stores[prev - 1].value, stores[state.flashingIndex].value],
-      addedAt: performance.now()
-    });
-    if (state.connections.length > MAX_CONNECTIONS) {
-      state.connections.shift();
-    }
-  }
 
   refreshChart();
   startFlashColorCycle();
@@ -322,7 +305,7 @@ function startFlashColorCycle() {
     // 仅改颜色，不动 data，最大程度避免 rippleEffect 被重置
     state.chart.setOption({
       series: [
-        {}, {}, {}, {},
+        {}, {},
         {
           itemStyle: {
             color: state.flashColor,
@@ -334,14 +317,8 @@ function startFlashColorCycle() {
   }, 110);
 }
 
-// ============ 把当前状态同步到图表（飞行光线 + 金色涟漪 + 刚点亮涟漪） ============
+// ============ 把当前状态同步到图表（金色涟漪 + 刚点亮涟漪） ============
 function refreshChart() {
-  // 清掉过期的飞行光线
-  const now = performance.now();
-  state.connections = state.connections.filter(
-    (c) => now - c.addedAt < CONNECTION_LIFETIME_MS
-  );
-
   // 金色稳定涟漪：所有已点亮 - 当前闪烁中那颗
   const goldEnd = state.flashingIndex >= 0 ? state.flashingIndex : state.activeIndex;
   const goldData = stores.slice(0, goldEnd);
@@ -352,8 +329,7 @@ function refreshChart() {
 
   state.chart.setOption({
     series: [
-      {}, {},
-      { data: state.connections.map((c) => ({ coords: c.coords })) },
+      {},
       { data: goldData },
       {
         data: flashData,
@@ -461,33 +437,7 @@ function createOption() {
         },
         z: 3
       },
-      // 2 · 飞行光线：相邻点亮之间的流光连接，每条最多存活 CONNECTION_LIFETIME_MS
-      {
-        name: "飞行光线",
-        type: "lines",
-        coordinateSystem: "geo",
-        data: [],
-        polyline: false,
-        effect: {
-          show: true,
-          period: 2.4,
-          trailLength: 0.55,
-          symbol: "circle",
-          symbolSize: 5,
-          color: "#fff8d6"
-        },
-        lineStyle: {
-          color: "rgba(250, 204, 21, 0.45)",
-          width: 1.5,
-          opacity: 0.6,
-          curveness: 0.28,
-          shadowColor: "rgba(250, 204, 21, 0.55)",
-          shadowBlur: 6
-        },
-        silent: true,
-        z: 4
-      },
-      // 3 · 已点亮：金色 effectScatter，持续涟漪
+      // 2 · 已点亮：金色 effectScatter，持续涟漪
       {
         name: "已点亮",
         type: "effectScatter",
@@ -523,7 +473,7 @@ function createOption() {
         silent: true,
         z: 5
       },
-      // 4 · 刚点亮：更大涟漪 + 颜色循环（1s 之后凝固到 #3）
+      // 3 · 刚点亮：更大涟漪 + 颜色循环（1s 之后凝固到已点亮）
       {
         name: "刚点亮",
         type: "effectScatter",
